@@ -3,7 +3,21 @@ include(FetchContent)
 
 project(vulkan-starter-app LANGUAGES C CXX)
 
-add_executable(${PROJECT_NAME} source/main.cpp source/graphics_internal.cpp source/application.cpp)
+# Какую лабораторную собирать. Меняется при конфигурации:
+#   cmake --preset debug -DLAB=2
+set(LAB "1" CACHE STRING "Lab number to build")
+
+set(LAB_DIR ${CMAKE_SOURCE_DIR}/labs/lab${LAB})
+
+if(NOT IS_DIRECTORY ${LAB_DIR})
+	message(FATAL_ERROR "No such directory: ${LAB_DIR}. Pass an existing lab, e.g. -DLAB=1")
+endif()
+
+file(GLOB LAB_SOURCES CONFIGURE_DEPENDS ${LAB_DIR}/*.cpp)
+
+message(STATUS "Building lab ${LAB} from ${LAB_DIR}")
+
+add_executable(${PROJECT_NAME} source/main.cpp source/graphics_internal.cpp ${LAB_SOURCES})
 
 if(LINUX)
 	target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wno-missing-field-initializers)
@@ -64,7 +78,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	GPUOpen::VulkanMemoryAllocator
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
+target_include_directories(${PROJECT_NAME} PRIVATE
+	${CMAKE_SOURCE_DIR}/source
+	${imgui_SOURCE_DIR}
+	${imgui_SOURCE_DIR}/backends
+)
 target_sources(${PROJECT_NAME} PRIVATE
 	${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 	${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
@@ -80,8 +98,10 @@ find_program(GLSLC_FOUND glslc)
 if(GLSLC_FOUND)
 	set(_SHADER_BINARIES)
 
+	# Исходники шейдеров лежат в labs/labN/shaders/,
+	# скомпилированные .spv кладутся в shaders/ в корне проекта
 	macro(compile_shader SHADER_FILE)
-		set(SHADER_SOURCE ${CMAKE_SOURCE_DIR}/shaders/${SHADER_FILE})
+		set(SHADER_SOURCE ${LAB_DIR}/shaders/${SHADER_FILE})
 		set(SHADER_BINARY ${SHADER_FILE}.spv)
 		set(SHADER_BINARY_PATH ${CMAKE_SOURCE_DIR}/shaders/${SHADER_BINARY})
 
