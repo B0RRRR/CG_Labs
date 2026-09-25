@@ -32,6 +32,9 @@ endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED TRUE CXX_STANDARD 20)
 
+# Do not let glfw3.h pull in GL/gl.h, which is absent without OpenGL dev headers
+target_compile_definitions(${PROJECT_NAME} PRIVATE GLFW_INCLUDE_NONE=)
+
 FetchContent_Declare(
 	glfw
 	GIT_REPOSITORY https://github.com/glfw/glfw.git
