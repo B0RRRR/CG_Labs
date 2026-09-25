@@ -1,3 +1,11 @@
 build-*/
 shaders/*.spv
 imgui.ini
+# Служебные файлы LaTeX (сам report.pdf хранится в репозитории)
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
