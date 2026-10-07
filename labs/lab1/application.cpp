@@ -27,7 +27,7 @@ struct PushConstants {
 	float tint[4];
 };
 
-
+// вершины октаэдра в локальных координатах
 constexpr Vec3 octahedron_positions[] = {
 	{  1.0f,  0.0f,  0.0f },
 	{ -1.0f,  0.0f,  0.0f },
@@ -37,11 +37,13 @@ constexpr Vec3 octahedron_positions[] = {
 	{  0.0f,  0.0f, -1.0f },
 };
 
+// индексы октаэдра
 constexpr uint16_t octahedron_indices[] = {
 	2, 4, 0,  2, 1, 4,  2, 5, 1,  2, 0, 5,
 	3, 0, 4,  3, 4, 1,  3, 1, 5,  3, 5, 0,
 };
 
+// кол-во элементов
 constexpr uint32_t octahedron_index_count =
 	sizeof(octahedron_indices) / sizeof(octahedron_indices[0]);
 
@@ -77,6 +79,8 @@ bool use_vertex_colors = true;
 
 Mat4 model_matrix = math::identity();
 
+// чтение файла шейдера
+// Читает файл целиком в память.
 std::vector<char> readFile(const char* const path) {
 	std::ifstream file(path, std::ios::ate | std::ios::binary);
 	if (!file.is_open()) {
@@ -93,6 +97,8 @@ std::vector<char> readFile(const char* const path) {
 	return buffer;
 }
 
+
+// Загружает скомпилированный шейдер (.spv) и создаёт из него объект Vulkan.
 VkShaderModule createShaderModule(const char* const path) {
 	const std::vector<char> code = readFile(path);
 	if (code.empty()) {
@@ -100,8 +106,11 @@ VkShaderModule createShaderModule(const char* const path) {
 	}
 
 	const VkShaderModuleCreateInfo shader_module = {
+		// что за структура
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		// размер кода в байтах
 		.codeSize = code.size(),
+		// указатель на код шейдера
 		.pCode = reinterpret_cast<const uint32_t*>(code.data()),
 	};
 
@@ -116,6 +125,8 @@ VkShaderModule createShaderModule(const char* const path) {
 	return result;
 }
 
+
+// Создаёт буфер в памяти, видимой процессору, и копирует в него данные.
 bool createBuffer(const void* const data, VkDeviceSize size, VkBufferUsageFlags usage,
 				  VkBuffer* const out_buffer, VmaAllocation* const out_allocation) {
 	auto& context = graphics::internal::context;
@@ -127,6 +138,7 @@ bool createBuffer(const void* const data, VkDeviceSize size, VkBufferUsageFlags 
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
 	};
 
+	// выбор типа памяти для буфера
 	const VmaAllocationCreateInfo allocation = {
 		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
 				 VMA_ALLOCATION_CREATE_MAPPED_BIT,
@@ -140,12 +152,14 @@ bool createBuffer(const void* const data, VkDeviceSize size, VkBufferUsageFlags 
 		std::cerr << "Failed to create buffer\n";
 		return false;
 	}
-
+	// копирование данных в выделенную память
 	std::memcpy(allocation_info.pMappedData, data, size_t(size));
 
 	return vmaFlushAllocation(context.allocator, *out_allocation, 0, size) == VK_SUCCESS;
 }
 
+// Создаёт графический конвейер: шейдеры, формат вершины, тест глубины,
+// отсечение нелицевых граней и остальные настройки отрисовки.
 bool createPipeline() {
 	auto& context = graphics::internal::context;
 
@@ -192,7 +206,7 @@ bool createPipeline() {
 			.pName = "main",
 		},
 	};
-
+	// формат вершины
 	const VkVertexInputBindingDescription vertex_binding = {
 		.binding = 0,
 		.stride = sizeof(Vertex),
@@ -308,6 +322,7 @@ bool createPipeline() {
 	return true;
 }
 
+// Заполняет вершинный и индексный буферы геометрией октаэдра.
 bool createMesh() {
 	constexpr size_t vertex_count =
 		sizeof(octahedron_positions) / sizeof(octahedron_positions[0]);
@@ -321,6 +336,7 @@ bool createMesh() {
 		vertices[i].position[1] = p.y;
 		vertices[i].position[2] = p.z;
 
+		// Дз 5: цвет вершины из её позиции, [-1, 1] -> [0, 1]
 		vertices[i].color[0] = p.x * 0.5f + 0.5f;
 		vertices[i].color[1] = p.y * 0.5f + 0.5f;
 		vertices[i].color[2] = p.z * 0.5f + 0.5f;
@@ -336,6 +352,7 @@ bool createMesh() {
 						&vk_index_buffer, &vma_index_allocation);
 }
 
+// Дз 3: точка на траектории - восьмёрка, намотанная на окружность.
 Vec3 animationOffset() {
 	if (animation_radius == 0.0f && animation_height == 0.0f) {
 		return { 0.0f, 0.0f, 0.0f };
@@ -350,6 +367,8 @@ Vec3 animationOffset() {
 	};
 }
 
+// Рисует окно интерфейса. Каждому доп. заданию соответствует свой раздел:
+// 1 — Projection, 2 — Transform, 3 — Animation, 4 и 5 — Color.
 void drawInterface() {
 	ImGui::Begin("Lab 1 - Octahedron");
 
@@ -357,6 +376,7 @@ void drawInterface() {
 				double(ImGui::GetIO().Framerate),
 				double(1000.0f / ImGui::GetIO().Framerate));
 
+	// Дз 1: переключение проекции
 	if (ImGui::CollapsingHeader("Projection", ImGuiTreeNodeFlags_DefaultOpen)) {
 		int projection = use_perspective ? 0 : 1;
 
@@ -375,6 +395,7 @@ void drawInterface() {
 		ImGui::SliderFloat("Camera distance", &camera_distance, 2.0f, 20.0f);
 	}
 
+	// Дз 2: позиция, поворот и растяжение фигуры
 	if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::DragFloat3("Position", &position.x, 0.01f, -5.0f, 5.0f);
 		ImGui::DragFloat3("Rotation", &rotation.x, 1.0f, -360.0f, 360.0f, "%.0f deg");
@@ -387,6 +408,7 @@ void drawInterface() {
 		}
 	}
 
+	// Доп. задание 3: пауза, скорость и параметры траектории
 	if (ImGui::CollapsingHeader("Animation", ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (ImGui::Button(animation_playing ? "Pause" : "Play")) {
 			animation_playing = !animation_playing;
@@ -404,6 +426,7 @@ void drawInterface() {
 		ImGui::SliderFloat("Spin", &animation_spin, -360.0f, 360.0f, "%.0f deg/s");
 	}
 
+	// Доп. задания 4 и 5: выбор цвета и переключение цветов вершин
 	if (ImGui::CollapsingHeader("Color", ImGuiTreeNodeFlags_DefaultOpen)) {
 		ImGui::ColorEdit3("Tint", tint_color);
 		ImGui::Checkbox("Procedural vertex colors", &use_vertex_colors);
@@ -416,6 +439,7 @@ void drawInterface() {
 
 } // namespace
 
+// Вызывается один раз при запуске: создаёт конвейер и буферы.
 bool initialize() {
 	if (!createPipeline()) {
 		return false;
@@ -424,6 +448,7 @@ bool initialize() {
 	return createMesh();
 }
 
+// Вызывается один раз при выходе: уничтожает всё, созданное в initialize.
 void shutdown() {
 	auto& context = graphics::internal::context;
 	vkQueueWaitIdle(context.graphics_queue);
@@ -435,6 +460,8 @@ void shutdown() {
 	vkDestroyPipelineLayout(context.device, vk_pipeline_layout, nullptr);
 }
 
+// Вызывается каждый кадр: интерфейс, отсчёт времени анимации,
+// пересборка матрицы модели.
 void update(double time) {
 	static double previous_time = time;
 
@@ -447,7 +474,8 @@ void update(double time) {
 
 	drawInterface();
 
-	// Матрица модели
+	// Доп. задания 2 и 3: матрица модели собирается из значений ползунков
+	// и смещения по траектории
 	const Vec3 animated_position = position + animationOffset();
 
 	const Vec3 animated_rotation = {
@@ -461,6 +489,7 @@ void update(double time) {
 				   math::scaling(scale);
 }
 
+// Вызывается каждый кадр: записывает команды отрисовки в командный буфер.
 void render(const graphics::internal::FrameData& fd) {
 	auto& context = graphics::internal::context;
 
@@ -491,7 +520,7 @@ void render(const graphics::internal::FrameData& fd) {
 
 	vkCmdBindPipeline(fd.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_pipeline);
 
-	// Доп. задание 1
+	// Доп. задание 1: выбор матрицы проекции
 	const Mat4 projection =
 		use_perspective
 			? math::perspective(math::radians(field_of_view), aspect, 0.1f, 100.0f)
@@ -503,6 +532,8 @@ void render(const graphics::internal::FrameData& fd) {
 
 	const PushConstants push_constants = {
 		.mvp = projection * view * model_matrix,
+		// Доп. задание 4: цвет из интерфейса.
+		// Четвёртое число — признак того, умножать ли его на цвета вершин (задание 5)
 		.tint = {
 			tint_color[0],
 			tint_color[1],

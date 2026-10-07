@@ -66,6 +66,7 @@ constexpr Mat4 operator*(const Mat4& a, const Mat4& b) {
 	return result;
 }
 
+// сдвиг
 constexpr Mat4 translation(Vec3 t) {
 	Mat4 result = identity();
 
@@ -76,6 +77,7 @@ constexpr Mat4 translation(Vec3 t) {
 	return result;
 }
 
+// растяжение
 constexpr Mat4 scaling(Vec3 s) {
 	Mat4 result = identity();
 
@@ -86,6 +88,7 @@ constexpr Mat4 scaling(Vec3 s) {
 	return result;
 }
 
+// поворот вокруг оси X
 inline Mat4 rotationX(float angle) {
 	const float s = std::sin(angle), c = std::cos(angle);
 
@@ -99,6 +102,7 @@ inline Mat4 rotationX(float angle) {
 	return result;
 }
 
+// поворот вокруг оси Y
 inline Mat4 rotationY(float angle) {
 	const float s = std::sin(angle), c = std::cos(angle);
 
@@ -112,6 +116,7 @@ inline Mat4 rotationY(float angle) {
 	return result;
 }
 
+// поворот вокруг оси Z
 inline Mat4 rotationZ(float angle) {
 	const float s = std::sin(angle), c = std::cos(angle);
 
@@ -125,11 +130,12 @@ inline Mat4 rotationZ(float angle) {
 	return result;
 }
 
+// поворот вокруг всех осей
 inline Mat4 rotation(Vec3 angles) {
 	return rotationZ(angles.z) * rotationX(angles.x) * rotationY(angles.y);
 }
 
-
+// camera 
 inline Mat4 lookAt(Vec3 eye, Vec3 target, Vec3 up) {
 	const Vec3 forward = normalize(target - eye);
 	const Vec3 right = normalize(cross(forward, up));
@@ -155,6 +161,7 @@ inline Mat4 lookAt(Vec3 eye, Vec3 target, Vec3 up) {
 
 	return result;
 }
+
 
 inline Mat4 perspective(float fov_y, float aspect, float z_near, float z_far) {
 	const float f = 1.0f / std::tan(fov_y * 0.5f);
