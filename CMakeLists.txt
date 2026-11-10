@@ -53,6 +53,13 @@ FetchContent_Declare(
 	GIT_TAG v3.4.0
 )
 
+# stb_image: загрузка и декодирование PNG/JPEG/BMP/TGA (лабораторная 3)
+FetchContent_Declare(
+	stb
+	GIT_REPOSITORY https://github.com/nothings/stb.git
+	GIT_TAG 4e9b368bfc071e97206ea5c6adba68dd0cbf8897
+)
+
 FetchContent_Declare(
 	imgui
 	GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -71,6 +78,7 @@ FetchContent_MakeAvailable(
 	vk-bootstrap
 	VulkanMemoryAllocator
 	imgui
+	stb
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -85,6 +93,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	${imgui_SOURCE_DIR}
 	${imgui_SOURCE_DIR}/backends
 )
+# SYSTEM — чтобы предупреждения из заголовка stb не смешивались с нашими
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${stb_SOURCE_DIR})
 target_sources(${PROJECT_NAME} PRIVATE
 	${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
 	${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
@@ -121,6 +131,9 @@ if(GLSLC_FOUND)
 	elseif(LAB STREQUAL "2")
 		compile_shader(lit.vert)
 		compile_shader(lit.frag)
+	elseif(LAB STREQUAL "3")
+		compile_shader(textured.vert)
+		compile_shader(textured.frag)
 	endif()
 
 	add_custom_target(shaders DEPENDS ${_SHADER_BINARIES})

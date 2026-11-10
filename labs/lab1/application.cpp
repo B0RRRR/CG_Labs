@@ -368,7 +368,7 @@ Vec3 animationOffset() {
 }
 
 // Рисует окно интерфейса. Каждому доп. заданию соответствует свой раздел:
-// 1 — Projection, 2 — Transform, 3 — Animation, 4 и 5 — Color.
+// 1 - Projection, 2 - Transform, 3 - Animation, 4 и 5 - Color.
 void drawInterface() {
 	ImGui::Begin("Lab 1 - Octahedron");
 
