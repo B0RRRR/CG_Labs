@@ -58,6 +58,8 @@ std::vector<VkFramebuffer> vk_imgui_framebuffers;
 VkCommandPool vk_imgui_command_pool;
 VkCommandBuffer vk_imgui_command_buffer;
 
+PreRenderCallback pre_render_callback;
+
 // D24_UNORM_S8_UINT is not supported on AMD, so pick the first available depth format
 VkFormat selectDepthFormat(VkPhysicalDevice physical_device) {
 	const VkFormat candidates[] = {
@@ -420,7 +422,7 @@ bool initialize(GLFWwindow* const window) {
 
 	vkb::InstanceBuilder ib;
 
-	auto ibr = ib.require_api_version(VK_MAKE_VERSION(1, 1, 0))
+	auto ibr = ib.require_api_version(VK_MAKE_VERSION(1, 3, 0))
 				 .request_validation_layers()
 				 .build();
 	if (!ibr) {
@@ -439,9 +441,15 @@ bool initialize(GLFWwindow* const window) {
 		return false;
 	}
 
+	const VkPhysicalDeviceVulkan13Features features_13 = {
+		.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+		.dynamicRendering = VK_TRUE,
+	};
+
 	vkb::PhysicalDeviceSelector pds(vkb_instance, vk_surface);
 
 	auto pds_result = pds.prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+						 .set_required_features_13(features_13)
 						 .require_present()
 						 .select();
 	if (!pds_result) {
@@ -721,6 +729,8 @@ bool initialize(GLFWwindow* const window) {
 }
 
 void shutdown() {
+	pre_render_callback = nullptr;
+
 	vkQueueWaitIdle(context.graphics_queue);
 
 	ImGui_ImplVulkan_Shutdown();
@@ -759,6 +769,10 @@ void shutdown() {
 
 	vkDestroySurfaceKHR(vk_instance, vk_surface, nullptr);
 	vkDestroyInstance(vk_instance, nullptr);
+}
+
+void setPreRenderCallback(PreRenderCallback callback) {
+	pre_render_callback = callback;
 }
 
 void resize(uint32_t width, uint32_t height) {
@@ -803,6 +817,10 @@ FrameData prepare() {
 	};
 
 	vkBeginCommandBuffer(vk_command_buffer, &command_buffer_begin);
+
+	if (pre_render_callback != nullptr) {
+		pre_render_callback(vk_command_buffer);
+	}
 
 	const VkClearValue clear_values[] = {
 		{ .color = { .float32 = { 0.0f, 0.0f, 0.0f, 1.0f } } },

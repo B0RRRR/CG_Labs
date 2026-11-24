@@ -30,10 +30,14 @@ struct FrameData {
 	VkCommandBuffer command_buffer;
 };
 
+using PreRenderCallback = void (*)(VkCommandBuffer);
+
 extern Context context;
 
 bool initialize(GLFWwindow* const window);
 void shutdown();
+
+void setPreRenderCallback(PreRenderCallback callback);
 
 void resize(uint32_t width, uint32_t height);
 
